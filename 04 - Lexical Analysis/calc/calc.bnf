@@ -1,0 +1,40 @@
+Parser Grammar
+==============
+< Program >     ::= < Program > < Statement > 
+                    | < Statement >
+
+< Statement >   ::= < Expression > NEWLINE
+
+< Expression >  ::= < Expression > PLUS < Expression >
+                    | < Expression > MINUS < Expression >
+                    | < Expression > TIMES < Expression >
+                    | < Expression > DIVIDE < Expression >
+                    | < Expression > POW < Expression >
+                    | LPAREN  < Expression > RPAREN
+                    | MINUS < Expression > 
+                    | < Number >
+
+< Number >      ::= INTLIT
+                    | FLOATLIT
+
+
+
+
+Lexer Grammar
+=============
+Token       Pattern
+-------     -------
+NEWLINE     \n
+PLUS        +
+MINUS       -
+TIMES       *
+DIVIDE      /
+POW         ^
+LPAREN      (
+RPAREN      )
+INTLIT      [0-9]+ (a string of digits)
+FLOATLIT    INTLIT . INTLIT
+COMMENT      # to the end of the line 
+  - Note: We will not make a comment token. Lexer skips the comments
+
+

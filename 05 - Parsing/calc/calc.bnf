@@ -1,3 +1,11 @@
+To eliminate left recursion:
+
+A -> A a1 B | A a2 B | A an B | B
+-replace with-
+
+A -> A'B
+A' -> a1 B A' | a2 B A' | ... an B A' | B A' | ""
+
 Parser Grammar
 ==============
 < Program >     ::= < Program > < Statement > 
@@ -5,13 +13,22 @@ Parser Grammar
 
 < Statement >   ::= < Expression > NEWLINE
 
-< Expression >  ::= < Expression > PLUS < Expression >
-                    | < Expression > MINUS < Expression >
-                    | < Expression > TIMES < Expression >
-                    | < Expression > DIVIDE < Expression >
-                    | < Expression > POW < Expression >
-                    | LPAREN  < Expression > RPAREN
-                    | MINUS < Expression > 
+< Expression >  ::= < Expression' > < Term >
+
+< Expression' > ::= PLUS < Term > < Expression' >
+                    | MINUS < Term > < Expression' >
+                    | < Term > < Expression' >
+                    | ""
+
+< Term >        ::= | < Term > TIMES < Factor >
+                    | < Term > DIVIDE < Factor >
+                    | < Factor >
+
+< Factor >      ::= | < Exp > POW < Factor >
+                    | < Exp >
+
+< Exp >         ::= | LPAREN  < Expression > RPAREN
+                    | MINUS < Exp > 
                     | < Number >
 
 < Number >      ::= INTLIT

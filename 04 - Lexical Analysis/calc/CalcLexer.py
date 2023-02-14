@@ -178,6 +178,7 @@ class Lexer:
         while self.__cur.isdigit():
             self.__consume()
         self.__set_token(token, float(self.__lexeme))
+        return True
         
 
 def main():

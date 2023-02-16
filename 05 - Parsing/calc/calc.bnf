@@ -3,8 +3,8 @@ To eliminate left recursion:
 A -> A a1 B | A a2 B | A an B | B
 -replace with-
 
-A -> A'B
-A' -> a1 B A' | a2 B A' | ... an B A' | B A' | ""
+A -> BA'
+A' -> a1  A' | a2  A' | ... an  A' |  ""
 
 Parser Grammar
 ==============
@@ -13,21 +13,24 @@ Parser Grammar
 
 < Statement >   ::= < Expression > NEWLINE
 
-< Expression >  ::= < Expression' > < Term >
+< Expression >  ::= < Term > < Expression' >
 
 < Expression' > ::= PLUS < Term > < Expression' >
                     | MINUS < Term > < Expression' >
-                    | < Term > < Expression' >
                     | ""
 
-< Term >        ::= | < Term > TIMES < Factor >
-                    | < Term > DIVIDE < Factor >
-                    | < Factor >
+< Term >        ::= < Factor > < Term' >
 
-< Factor >      ::= | < Exp > POW < Factor >
-                    | < Exp >
+< Term' >       ::= TIMES < Factor > < Term' >
+                    | DIVIDE < Factor > < Term' >
+                    | ""
 
-< Exp >         ::= | LPAREN  < Expression > RPAREN
+< Factor >      ::= < Exp > < Factor' >
+
+< Factor'>          POW < Factor >
+                    | ""
+
+< Exp >         ::= LPAREN  < Expression > RPAREN
                     | MINUS < Exp > 
                     | < Number >
 
@@ -55,3 +58,26 @@ COMMENT      # to the end of the line
   - Note: We will not make a comment token. Lexer skips the comments
 
 
+First and Follow
+================
+First(Program) = First(Statement)
+
+First(Statement) = First(Expression)
+
+First(Expression) = First(Expression') 
+
+First(Expression') = {PLUS, MINUS, First(TERM), ""}
+
+
+
+Follow(Program) = {EOF}
+
+Follow(Statement) = {First(Statement), EOF}
+
+Follow(Expression) = {NEWLINE}
+
+Rules of Expression'
+--------------------
+First( PLUS < Term > < E' >) = {PLUS}
+First( MINUS < Term > < E' >) = {MINUS}
+First("") = {""}

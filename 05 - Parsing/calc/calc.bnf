@@ -1,11 +1,3 @@
-To eliminate left recursion:
-
-A -> A a1 B | A a2 B | A an B | B
--replace with-
-
-A -> BA'
-A' -> a1  A' | a2  A' | ... an  A' |  ""
-
 Parser Grammar
 ==============
 < Program >     ::= < Program > < Statement > 

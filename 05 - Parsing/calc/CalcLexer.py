@@ -72,7 +72,8 @@ class Lexer:
 
 
     def __set_token(self, token, value = None):
-        self.__token = TokenDetail(token, self.__lexeme, value, self.__line, self.__col)
+        col = self.__col - len(self.__lexeme)
+        self.__token = TokenDetail(token, self.__lexeme, value, self.__line, col)
 
 
     def get_token(self):

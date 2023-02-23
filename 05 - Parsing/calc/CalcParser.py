@@ -26,7 +26,9 @@ aryness = {
 }
 
 class ParseTree:
-    def __init__(self, op=None, token=None, children=[]):
+    def __init__(self, op=None, token=None, children=None):
+        if children == None:
+            children = []
         self.op = op
         self.token = token
         self.children = children
@@ -66,17 +68,17 @@ class ParseTree:
     def print(self, level=0):
         mid = len(self.children) // 2
         # print the right hand side
-        for child in self.children[mid:]:
+        for child in self.children[mid:][::-1]:
             child.print(level+1)
         
         # print ourself
         extra=""
-        if self.token.token in (Token.FLOATLIT, Token.INTLIT):
+        if self.token and self.token.token in (Token.FLOATLIT, Token.INTLIT):
             extra = ": " + self.token.lexeme
         print(f"{' '*level}{self.op.name}{extra}")
 
         # print the left hand side
-        for child in self.children[0:mid]:
+        for child in self.children[0:mid][::-1]:
             child.print(level+1)
 
 class Parser:
@@ -206,8 +208,14 @@ class Parser:
         """
         < Term >        ::= < Factor > < Term' >
         """
-        return self.__parse_factor()
-        self.__parse_term2()
+        f = self.__parse_factor()
+        t2 = self.__parse_term2()
+
+        if not t2:
+            return f
+
+        t2.add_left_leaf(f)
+        return t2
 
 
     def __parse_term2(self):
@@ -217,20 +225,36 @@ class Parser:
                             | ""
         """
         if self.__has(Token.TIMES):
+            t2 = ParseTree(Operator.MUL, self.__lexer.get_token()) 
             self.__lexer.next()
-            self.__parse_factor()
-            self.__parse_term2()
+            t2.add_right(self.__parse_factor())
+            t3 = self.__parse_term2()
         elif self.__has(Token.DIVIDE):
+            t2 = ParseTree(Operator.DIV, self.__lexer.get_token()) 
             self.__lexer.next()
-            self.__parse_factor()
-            self.__parse_term2()
+            t2.add_right(self.__parse_factor())
+            t3 = self.__parse_term2()
+        else:
+            # the empty string case
+            return None
+        
+        if not t3:
+            return t2 
+        t3.add_left_leaf(t2)
+        return t3
+        
 
     def __parse_factor(self):
         """
         < Factor >      ::= < Exp > < Factor' >
         """
-        return self.__parse_exp()
-        self.__parse_factor2()
+        ex = self.__parse_exp()
+        f2 = self.__parse_factor2()
+        if not f2:
+            return ex
+        f2.add_left_leaf(ex)
+        return f2
+
 
     def __parse_factor2(self):
         """
@@ -238,8 +262,13 @@ class Parser:
                             | ""
         """
         if self.__has(Token.POW):
+            result = ParseTree(Operator.POW, self.__lexer.get_token())
             self.__lexer.next()
-            self.__parse_factor()
+            result.add_right(self.__parse_factor())
+            return result
+        else:
+            # empty condition ""
+            return None
     
     def __parse_exp(self):
         """
@@ -252,29 +281,27 @@ class Parser:
         """
         if self.__has(Token.LPAREN):
             self.__lexer.next()
-            self.__parse_expression()
+            result = self.__parse_expression()
             self.__must_be(Token.RPAREN)
             self.__lexer.next()
         elif self.__has(Token.MINUS):
+            result = ParseTree(Operator.NEG, self.__lexer.get_token())
             self.__lexer.next()
-            self.__parse_exp()
+            result.add_right(self.__parse_exp())
         elif self.__has(Token.INTLIT):
             result = ParseTree(Operator.LIT, self.__lexer.get_token())
             self.__lexer.next()
-            return result
         elif self.__must_be(Token.FLOATLIT):
+            result = ParseTree(Operator.LIT, self.__lexer.get_token())
             self.__lexer.next()
+        return result
 
 
 
-def main():
+def main(file):
     """
-    A unit test for our lexer.
+    A unit test for our parser.
     """
-    if len(sys.argv) == 2:
-        file = open(sys.argv[1], 'r')
-    else:
-        file = sys.stdin
     lexer = CalcLexer.Lexer(file)
     parser = Parser(lexer)
     parser.parse().print()
@@ -282,4 +309,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) == 2:
+        file = open(sys.argv[1], 'r')
+    else:
+        file = sys.stdin
+    main(file)

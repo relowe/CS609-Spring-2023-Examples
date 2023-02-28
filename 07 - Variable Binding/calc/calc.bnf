@@ -1,0 +1,75 @@
+Parser Grammar
+==============
+< Program >     ::= < Program > < Statement > 
+                    | < Statement >
+
+< Statement >   ::= < Expression > NEWLINE
+
+< Expression >  ::= < Term > < Expression' >
+
+< Expression' > ::= PLUS < Term > < Expression' >
+                    | MINUS < Term > < Expression' >
+                    | ""
+
+< Term >        ::= < Factor > < Term' >
+
+< Term' >       ::= TIMES < Factor > < Term' >
+                    | DIVIDE < Factor > < Term' >
+                    | ""
+
+< Factor >      ::= < Exp > < Factor' >
+
+< Factor'>          POW < Factor >
+                    | ""
+
+< Exp >         ::= LPAREN  < Expression > RPAREN
+                    | MINUS < Exp > 
+                    | < Number >
+
+< Number >      ::= INTLIT
+                    | FLOATLIT
+
+
+
+
+Lexer Grammar
+=============
+Token       Pattern
+-------     -------
+NEWLINE     \n
+PLUS        +
+MINUS       -
+TIMES       *
+DIVIDE      /
+POW         ^
+LPAREN      (
+RPAREN      )
+INTLIT      [0-9]+ (a string of digits)
+FLOATLIT    INTLIT . INTLIT
+COMMENT      # to the end of the line 
+  - Note: We will not make a comment token. Lexer skips the comments
+
+
+First and Follow
+================
+First(Program) = First(Statement)
+
+First(Statement) = First(Expression)
+
+First(Expression) = First(Expression') 
+
+First(Expression') = {PLUS, MINUS, First(TERM), ""}
+
+
+
+Follow(Program) = {EOF}
+
+Follow(Statement) = {First(Statement), EOF}
+
+Follow(Expression) = {NEWLINE}
+
+Rules of Expression'
+--------------------
+First( PLUS < Term > < E' >) = {PLUS}
+First( MINUS < Term > < E' >) = {MINUS}
+First("") = {""}

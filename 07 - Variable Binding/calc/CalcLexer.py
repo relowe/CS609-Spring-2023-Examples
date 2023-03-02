@@ -18,6 +18,8 @@ class Token(Enum):  # a class which inherits enum
     RPAREN = auto()
     INTLIT = auto()
     FLOATLIT = auto()
+    EQUAL = auto()
+    ID = auto()
 
 # Store the details of a token
 TokenDetail = namedtuple('TokenDetail', ('token', 
@@ -63,6 +65,8 @@ class Lexer:
         elif self.__lex_single():
             pass
         elif self.__lex_number():
+            pass
+        elif self.__lex_kw_or_id():
             pass
         else:
             self.__consume()
@@ -128,7 +132,8 @@ class Lexer:
                 ('/', Token.DIVIDE),
                 ('^', Token.POW),
                 ('(', Token.LPAREN),
-                (')', Token.RPAREN))
+                (')', Token.RPAREN),
+                ('=', Token.EQUAL))
         
         token = None
         for t in toks:
@@ -181,6 +186,26 @@ class Lexer:
         while self.__cur.isdigit():
             self.__consume()
         self.__set_token(token, float(self.__lexeme))
+        return True
+    
+    def __lex_kw_or_id(self):
+        """
+        Attempt to lex a keyword or an id.
+        """
+
+        # consume characters which match the pattern
+        if self.__cur.isalpha() or self.__cur == '_':
+            self.__consume()
+        else:
+            return False
+        
+        # consume the rest of the consistent characters
+        while self.__cur.isalpha() or self.__cur.isdigit() or self.__cur == '_':
+            self.__consume()
+        
+        # create the token
+        self.__set_token(Token.ID)
+
         return True
         
 

@@ -3,7 +3,12 @@ Parser Grammar
 < Program >     ::= < Program > < Statement > 
                     | < Statement >
 
-< Statement >   ::= < Expression > NEWLINE
+< Statement >   ::= < Number> < Expression' > NEWLINE
+                    | < Ref > < Statement' > NEWLINE
+
+< Statement' >  ::= < Expression'>    
+                    | EQUAL < Expression >
+                    | ""
 
 < Expression >  ::= < Term > < Expression' >
 
@@ -25,9 +30,12 @@ Parser Grammar
 < Exp >         ::= LPAREN  < Expression > RPAREN
                     | MINUS < Exp > 
                     | < Number >
+                    | < Ref >                                       []
 
 < Number >      ::= INTLIT
                     | FLOATLIT
+
+< Ref >         ::= ID                                              []
 
 
 
@@ -44,8 +52,10 @@ DIVIDE      /
 POW         ^
 LPAREN      (
 RPAREN      )
+EQUAL       =
 INTLIT      [0-9]+ (a string of digits)
 FLOATLIT    INTLIT . INTLIT
+ID          [a-zA-Z_][a-zA-Z0-9_]*
 COMMENT      # to the end of the line 
   - Note: We will not make a comment token. Lexer skips the comments
 

@@ -13,6 +13,8 @@ class Operator(Enum):
     POW = auto()
     NEG = auto()
     LIT = auto()
+    ASSIGN = auto()
+    VAR = auto()
 
 aryness = {
     Operator.PROG: math.inf,
@@ -22,7 +24,9 @@ aryness = {
     Operator.DIV: 2,
     Operator.POW: 2,
     Operator.NEG: 1,
-    Operator.LIT: 0
+    Operator.LIT: 0,
+    Operator.ASSIGN: 2,
+    Operator.VAR: 0
 }
 
 class ParseTree:
@@ -137,16 +141,45 @@ class Parser:
         
         return result
 
+
     def __parse_statement(self):
         """
-        < Statement >   ::= < Expression > NEWLINE
+        < Statement >   ::= < Number> < Expression' > NEWLINE
+                            | < Ref > < Statement' > NEWLINE
         """
-        result = self.__parse_expression()
+        if self.__has(Token.INTLIT) or self.__has(Token.FLOATLIT):
+            # beginning with a number means this is an expression
+            result = self.__parse_expression()
+        else:
+            result = self.__parse_ref()
+            s2 = self.__parse_statement2()
+            if s2:
+                s2.add_left_leaf(result)
+                result = s2
         if not self.__has(Token.NEWLINE):
             self.__must_be(Token.EOF)
         self.__lexer.next()     # when we match a token, we should consume it
 
         return result
+    
+
+    def __parse_statement2(self):
+        """
+        < Statement' >  ::= < Expression'>    
+                            | EQUAL < Expression >
+                            | ""
+        """
+        if self.__has(Token.EQUAL):
+            # assignment
+            tok = self.__lexer.get_token()
+            result = ParseTree(Operator.ASSIGN, tok)
+            self.__lexer.next()
+            result.add_left(self.__parse_expression())
+            return result
+        else:
+            # because we know expression2 has "" this will suffice
+            return self.__parse_expression2()
+
 
     def __parse_expression(self):
         """
@@ -275,6 +308,7 @@ class Parser:
         < Exp >         ::= LPAREN  < Expression > RPAREN
                             | MINUS < Exp > 
                             | < Number >
+                            | < Ref >
 
         < Number >      ::= INTLIT
                             | FLOATLIT
@@ -288,6 +322,8 @@ class Parser:
             result = ParseTree(Operator.NEG, self.__lexer.get_token())
             self.__lexer.next()
             result.add_right(self.__parse_exp())
+        elif self.__has(Token.ID):
+            return self.__parse_ref()
         elif self.__has(Token.INTLIT):
             result = ParseTree(Operator.LIT, self.__lexer.get_token())
             self.__lexer.next()
@@ -296,6 +332,14 @@ class Parser:
             self.__lexer.next()
         return result
 
+    def __parse_ref(self):
+        """
+        < Ref > ::= ID
+        """
+        self.__must_be(Token.ID)
+        tok = self.__lexer.get_token()
+        self.__lexer.next()
+        return ParseTree(Operator.VAR, tok)
 
 
 def main(file):

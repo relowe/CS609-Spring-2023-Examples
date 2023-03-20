@@ -1,2 +1,9 @@
-x=2+2
+integer x
+x=1
 x+2
+real y
+y=1.5
+x/2
+x
+y+2*4
+y*2+2*4

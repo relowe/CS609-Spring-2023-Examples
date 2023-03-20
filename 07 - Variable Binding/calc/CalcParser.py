@@ -14,7 +14,9 @@ class Operator(Enum):
     NEG = auto()
     LIT = auto()
     ASSIGN = auto()
+    INPUT = auto()
     VAR = auto()
+    DECL = auto()
 
 aryness = {
     Operator.PROG: math.inf,
@@ -26,7 +28,9 @@ aryness = {
     Operator.NEG: 1,
     Operator.LIT: 0,
     Operator.ASSIGN: 2,
-    Operator.VAR: 0
+    Operator.VAR: 0,
+    Operator.INPUT: 1,
+    Operator.DECL: 1
 }
 
 class ParseTree:
@@ -145,11 +149,17 @@ class Parser:
     def __parse_statement(self):
         """
         < Statement >   ::= < Number> < Expression' > NEWLINE
+                            | < Input > NEWLINE
+                            | < Var-Decl >
                             | < Ref > < Statement' > NEWLINE
         """
         if self.__has(Token.INTLIT) or self.__has(Token.FLOATLIT):
             # beginning with a number means this is an expression
             result = self.__parse_expression()
+        elif self.__has(Token.INPUT):
+            result = self.__parse_input()
+        elif self.__has(Token.INTEGER) or self.__has(Token.REAL):
+            result = self.__parse_var_decl()
         else:
             result = self.__parse_ref()
             s2 = self.__parse_statement2()
@@ -177,8 +187,40 @@ class Parser:
             result.add_left(self.__parse_expression())
             return result
         else:
-            # because we know expression2 has "" this will suffice
-            return self.__parse_expression2()
+            result = self.__parse_term2()
+            result2 = self.__parse_expression2()
+            if result2:
+                if result:
+                    result2.add_left_leaf(result)
+                result = result2
+            return result
+
+    def __parse_input(self):
+        """
+        < Input > ::= INPUT < Ref >
+        """
+        self.__must_be(Token.INPUT)
+        self.__lexer.next()
+        tok = self.__lexer.get_token()
+        result = ParseTree(Operator.INPUT, tok)
+        result.add_left(self.__parse_ref())
+        return result
+
+    
+    def __parse_var_decl(self):
+        """
+        < Var-Decl > ::= INTEGER < Ref >
+                         | REAL < Ref >
+        """
+        self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
+
+        # get the token
+        tok = self.__lexer.get_token()
+        self.__lexer.next()
+
+        result = ParseTree(Operator.DECL, tok)
+        result.add_left(self.__parse_ref())
+        return result
 
 
     def __parse_expression(self):

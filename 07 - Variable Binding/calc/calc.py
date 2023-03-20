@@ -2,8 +2,18 @@
 A simple tree walk interpreter for calc.
 """
 import sys
-from CalcLexer import Lexer
+from enum import Enum, auto
+from CalcLexer import Lexer,Token
 from CalcParser import Parser,Operator
+
+class RefType(Enum):
+    INT_VAR = auto()
+    REAL_VAR = auto()
+
+class RefEntry:
+    def __init__(self, value,ref_type):
+        self.value = value
+        self.ref_type = ref_type
 
 class ReferenceEnvironment:
     """
@@ -59,11 +69,18 @@ def eval_tree(tree, env):
         return eval_var(tree, env)
     elif tree.op == Operator.ASSIGN:
         return eval_assign(tree, env)
+    elif tree.op == Operator.INPUT:
+        return eval_input(tree, env)
+    elif tree.op == Operator.DECL:
+        return eval_decl(tree, env)
 
 def eval_program(tree, env):
     # semantic behavior for now is we print the result of every statement
+    # that returns a result
     for child in tree.children:
-        print(eval_tree(child, env))
+        result = eval_tree(child, env)
+        if result != None:
+            print(result)
 
 
 def eval_add(tree, env):
@@ -105,17 +122,72 @@ def eval_var(tree, env):
     val = env.get(tree.token.lexeme)
     if val == None:
         runtime_error(tree, f"Undefined Variable '{tree.token.lexeme}'")
-    return val
+    return val.value
+
+
+def eval_input(tree, env):
+    try:
+        var = env.get(name)
+        if var == None:
+            runtime_error(tree, f"Undefined Variable in input {name}")
+
+        # prompt for the variable and read it in
+        name = tree.children[0].token.lexeme
+        x = input(f"{name}=")
+        
+        if var.ref_type == RefType.INT_VAR:
+            var.value = int(x)
+        elif var.ref_type==RefType.REAL_VAR:
+            var.value  = float(x)
+    except:
+        runtime_error(tree, "Invalid Input")
+
 
 def eval_assign(tree, env):
-    # For now, insertion is always allowed. (Declared variables would require more) 
+    # get the name
     name = tree.children[0].token.lexeme
+
+    # lookup the variable
+    var = env.get(name)
+    if var == None:
+        runtime_error(tree, f"Assignment to undeclared variable {name}")
+
     value = eval_tree(tree.children[1], env)
+
+    # coerce the value
+    if var.ref_type == RefType.INT_VAR:
+        value = int(value)
+    elif var.ref_type == RefType.REAL_VAR:
+        value = float(value)
+
+    var.value = value
+
+
+def eval_decl(tree, env):
+    # get the type
+    if tree.token.token == Token.INTEGER:
+        ref_type = RefType.INT_VAR
+        init = 0
+    elif tree.token.token == Token.REAL:
+        ref_type = RefType.REAL_VAR
+        init = 0.0
+
+    # get the name
+    name = tree.children[0].token.lexeme
+
+    # make sure the name is unique
+    if env.get(name) != None:
+        runtime_error(tree, f"Redeclaration of variable {name}")
+
+    # insert into our environment
+    value = RefEntry(init, ref_type)
     env.set(name, value)
+
+    
 
 
 def runtime_error(tree, msg):
-    sys.stderr.write(f"Runtime error at line {tree.token.line} column {tree.token.col}: {msg}")
+    sys.stderr.write(f"Runtime error at line {tree.token.line} column {tree.token.col}: {msg}\n")
     sys.exit(-2)
 
 

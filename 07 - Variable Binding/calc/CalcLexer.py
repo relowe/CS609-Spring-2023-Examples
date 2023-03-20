@@ -20,6 +20,9 @@ class Token(Enum):  # a class which inherits enum
     FLOATLIT = auto()
     EQUAL = auto()
     ID = auto()
+    INPUT = auto()
+    INTEGER = auto()
+    REAL = auto()
 
 # Store the details of a token
 TokenDetail = namedtuple('TokenDetail', ('token', 
@@ -193,6 +196,10 @@ class Lexer:
         Attempt to lex a keyword or an id.
         """
 
+        kw = {'input': Token.INPUT,
+              'integer': Token.INTEGER,
+              'real': Token.REAL }
+
         # consume characters which match the pattern
         if self.__cur.isalpha() or self.__cur == '_':
             self.__consume()
@@ -204,7 +211,10 @@ class Lexer:
             self.__consume()
         
         # create the token
-        self.__set_token(Token.ID)
+        if self.__lexeme in kw:
+            self.__set_token(kw[self.__lexeme])
+        else:
+            self.__set_token(Token.ID)
 
         return True
         

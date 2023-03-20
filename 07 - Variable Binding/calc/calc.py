@@ -127,12 +127,12 @@ def eval_var(tree, env):
 
 def eval_input(tree, env):
     try:
+        name = tree.children[0].token.lexeme
         var = env.get(name)
         if var == None:
             runtime_error(tree, f"Undefined Variable in input {name}")
 
         # prompt for the variable and read it in
-        name = tree.children[0].token.lexeme
         x = input(f"{name}=")
         
         if var.ref_type == RefType.INT_VAR:

@@ -8,5 +8,7 @@ x
 y+2*4
 y*2+2*4
 integer z
+(2*2)
+
 input z
 z/2

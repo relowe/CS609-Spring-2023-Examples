@@ -141,7 +141,9 @@ class Parser:
         result = ParseTree(Operator.PROG)
 
         while not self.__has(Token.EOF):
-            result.add_right(self.__parse_statement())
+            statement = self.__parse_statement()
+            if statement:
+                result.add_right(statement)
         
         return result
 
@@ -160,6 +162,9 @@ class Parser:
             result = self.__parse_input()
         elif self.__has(Token.INTEGER) or self.__has(Token.REAL):
             result = self.__parse_var_decl()
+        elif self.__has(Token.NEWLINE):
+            # null statement
+            result = None
         else:
             result = self.__parse_ref()
             s2 = self.__parse_statement2()

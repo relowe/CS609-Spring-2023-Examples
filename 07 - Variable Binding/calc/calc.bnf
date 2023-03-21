@@ -6,7 +6,8 @@ Parser Grammar
 < Statement >   ::= < Number> < Expression' > NEWLINE
                     | < Ref > < Statement' > NEWLINE
                     | < Input > NEWLINE
-                    | < Var-Decl >
+                    | < Var-Decl > NEWLINE
+                    | "" NEWLINE
 
 < Statement' >  ::= < Expression'>    
                     | EQUAL < Expression >

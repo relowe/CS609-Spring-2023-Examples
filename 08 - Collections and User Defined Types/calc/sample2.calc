@@ -1,0 +1,14 @@
+integer x
+x=1
+x+2
+real y
+y=1.5
+x/2
+x
+y+2*4
+y*2+2*4
+integer z
+(2*2)
+
+input z
+z/2

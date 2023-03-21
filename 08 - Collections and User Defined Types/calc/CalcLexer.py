@@ -23,6 +23,14 @@ class Token(Enum):  # a class which inherits enum
     INPUT = auto()
     INTEGER = auto()
     REAL = auto()
+    ARRAY = auto()
+    OF = auto()
+    WITH = auto()
+    BOUNDS = auto()
+    LBRACKET = auto()
+    RBRACKET = auto()
+    COMMA = auto()
+    BSEP = auto()
 
 # Store the details of a token
 TokenDetail = namedtuple('TokenDetail', ('token', 
@@ -70,6 +78,8 @@ class Lexer:
         elif self.__lex_number():
             pass
         elif self.__lex_kw_or_id():
+            pass
+        elif self.__lex_bsep():
             pass
         else:
             self.__consume()
@@ -136,7 +146,10 @@ class Lexer:
                 ('^', Token.POW),
                 ('(', Token.LPAREN),
                 (')', Token.RPAREN),
-                ('=', Token.EQUAL))
+                ('=', Token.EQUAL),
+                (',', Token.COMMA),
+                ('[', Token.LBRACKET),
+                (']', Token.RBRACKET))
         
         token = None
         for t in toks:
@@ -176,7 +189,8 @@ class Lexer:
             return True
         
         # capture the .
-        self.__consume()
+        if self.__start_bsep():
+            return True
          
         # enter an invalid state
         token = Token.INVALID
@@ -198,7 +212,11 @@ class Lexer:
 
         kw = {'input': Token.INPUT,
               'integer': Token.INTEGER,
-              'real': Token.REAL }
+              'real': Token.REAL,
+              'array': Token.ARRAY,
+              'of': Token.OF,
+              'with': Token.WITH,
+              'bounds' : Token.BOUNDS }
 
         # consume characters which match the pattern
         if self.__cur.isalpha() or self.__cur == '_':
@@ -217,6 +235,21 @@ class Lexer:
             self.__set_token(Token.ID)
 
         return True
+    
+    def __lex_bsep(self):
+        for i in range(2):
+            if self.__cur != '.':
+                return False
+            self.__consume()
+        
+        self.__set_token(Token.BSEP)
+        return True
+    
+    def __start_bsep(self):
+        if self.__cur != '.':
+            return False
+        self.__consume()
+        return self.__cur == '.'
         
 
 def main():

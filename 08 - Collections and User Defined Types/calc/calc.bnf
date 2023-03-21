@@ -15,8 +15,20 @@ Parser Grammar
 
 < Input >       ::= INPUT < Ref >
 
-< Var-Decl >    ::= INTEGER < Ref >
-                    | REAL < Ref >
+< Var-Decl >    ::= < Simple-Type > ID
+                    | < Array-Type > ID
+
+< Array-Type >  ::= ARRAY OF < Simple-Type > WITH BOUNDS < Array-Bounds > 
+
+< Array-Bounds > ::= LBRACKET < Bounds-List > RBRACKET
+
+< Bounds-List >  ::= < Bound > 
+                     | < Bounds-List > COMMA < Bound >
+
+< Bound > ::= INTLIT 
+              | INTLIT BSEP INTLIT
+
+< Simple-Type > ::= INTEGER | REAL
 
 < Expression >  ::= < Term > < Expression' >
 
@@ -38,12 +50,13 @@ Parser Grammar
 < Exp >         ::= LPAREN  < Expression > RPAREN
                     | MINUS < Exp > 
                     | < Number >
-                    | < Ref >                                       []
+                    | < Ref >                                       
 
 < Number >      ::= INTLIT
                     | FLOATLIT
 
-< Ref >         ::= ID                                              []
+< Ref >         ::= ID
+                    | ID LBRACKET < Expression > RBRACKET
 
 
 
@@ -67,6 +80,14 @@ ID          [a-zA-Z_][a-zA-Z0-9_]*
 INPUT       input
 INTEGER     integer
 REAL        real
+ARRAY       array
+OF          of
+WITH        with
+BOUNDS      bounds
+LBRACKET    [
+RBRACKET    ]
+COMMA       ,
+BSEP        ..
 COMMENT      # to the end of the line 
   - Note: We will not make a comment token. Lexer skips the comments
 

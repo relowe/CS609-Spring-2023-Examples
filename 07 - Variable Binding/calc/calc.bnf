@@ -3,10 +3,10 @@ Parser Grammar
 < Program >     ::= < Program > < Statement > 
                     | < Statement >
 
-< Statement >   ::= < Number> < Expression' > NEWLINE
+< Statement >   ::= < Input > NEWLINE
+                    | < Var-Decl >
                     | < Ref > < Statement' > NEWLINE
-                    | < Input > NEWLINE
-                    | < Var-Decl > NEWLINE
+                    | < Expression > NEWLINE
                     | "" NEWLINE
 
 < Statement' >  ::= < Expression'>    

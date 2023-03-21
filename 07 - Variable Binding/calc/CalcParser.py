@@ -150,27 +150,27 @@ class Parser:
 
     def __parse_statement(self):
         """
-        < Statement >   ::= < Number> < Expression' > NEWLINE
-                            | < Input > NEWLINE
+        < Statement >   ::= < Input > NEWLINE
                             | < Var-Decl >
                             | < Ref > < Statement' > NEWLINE
+                            | < Expression > NEWLINE
+                            | "" NEWLINE
         """
-        if self.__has(Token.INTLIT) or self.__has(Token.FLOATLIT):
-            # beginning with a number means this is an expression
-            result = self.__parse_expression()
-        elif self.__has(Token.INPUT):
+        if self.__has(Token.INPUT):
             result = self.__parse_input()
         elif self.__has(Token.INTEGER) or self.__has(Token.REAL):
             result = self.__parse_var_decl()
         elif self.__has(Token.NEWLINE):
             # null statement
             result = None
-        else:
+        elif self.__has(Token.ID):
             result = self.__parse_ref()
             s2 = self.__parse_statement2()
             if s2:
                 s2.add_left_leaf(result)
                 result = s2
+        else:
+            result = self.__parse_expression()
         if not self.__has(Token.NEWLINE):
             self.__must_be(Token.EOF)
         self.__lexer.next()     # when we match a token, we should consume it

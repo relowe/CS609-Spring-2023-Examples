@@ -50,6 +50,7 @@ class Lexer:
         self.__token = None
         self.__file = file
         self.__cur = None
+        self.__in_bsep = False
     
 
     def next(self):
@@ -184,14 +185,12 @@ class Lexer:
             self.__consume()
 
         # we found an integer
-        if self.__cur != '.':
+        if self.__cur != '.' or self.__start_bsep():
+            if self.__lexeme[-1] == '.':
+                self.__lexeme = self.__lexeme[0:-1]
             self.__set_token(token, int(self.__lexeme))
             return True
         
-        # capture the .
-        if self.__start_bsep():
-            return True
-         
         # enter an invalid state
         token = Token.INVALID
         if not self.__cur.isdigit():
@@ -237,11 +236,19 @@ class Lexer:
         return True
     
     def __lex_bsep(self):
-        for i in range(2):
+        # control the number of periods we need to see
+        if self.__in_bsep:
+            n = 1
+            self.__in_bsep = False
+        else:
+            n = 2
+
+        for i in range(n):
             if self.__cur != '.':
                 return False
             self.__consume()
         
+        self.__lexeme = '..'
         self.__set_token(Token.BSEP)
         return True
     
@@ -249,7 +256,8 @@ class Lexer:
         if self.__cur != '.':
             return False
         self.__consume()
-        return self.__cur == '.'
+        self.__in_bsep = self.__cur == '.'
+        return self.__in_bsep
         
 
 def main():

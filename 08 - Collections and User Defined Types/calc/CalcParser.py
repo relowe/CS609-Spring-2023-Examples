@@ -1,5 +1,5 @@
 import CalcLexer
-from CalcLexer import Token
+from CalcLexer import Token, TokenDetail
 import sys
 from enum import Enum, auto
 import math
@@ -16,7 +16,10 @@ class Operator(Enum):
     ASSIGN = auto()
     INPUT = auto()
     VAR = auto()
+    ARRAY_VAR = auto()
     DECL = auto()
+    ARRAY_DECL = auto()
+    BOUNDS = auto()
 
 aryness = {
     Operator.PROG: math.inf,
@@ -29,8 +32,11 @@ aryness = {
     Operator.LIT: 0,
     Operator.ASSIGN: 2,
     Operator.VAR: 0,
+    Operator.ARRAY_VAR: 0,
     Operator.INPUT: 1,
-    Operator.DECL: 1
+    Operator.DECL: 1,
+    Operator.ARRAY_DECL: 2,
+    Operator.BOUNDS: 0
 }
 
 class ParseTree:
@@ -158,7 +164,7 @@ class Parser:
         """
         if self.__has(Token.INPUT):
             result = self.__parse_input()
-        elif self.__has(Token.INTEGER) or self.__has(Token.REAL):
+        elif self.__has(Token.INTEGER) or self.__has(Token.REAL) or self.__has(Token.ARRAY):
             result = self.__parse_var_decl()
         elif self.__has(Token.NEWLINE):
             # null statement
@@ -214,18 +220,101 @@ class Parser:
     
     def __parse_var_decl(self):
         """
-        < Var-Decl > ::= INTEGER < Ref >
-                         | REAL < Ref >
-        """
-        self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
+        < Var-Decl >    ::= < Simple-Type > ID
+                            | < Array-Type > ID
 
-        # get the token
+        < Simple-Type > ::= INTEGER | REAL
+        """
+        if self.__has(Token.INTEGER) or self.__has(Token.REAL):
+            # get the token
+            tok = self.__lexer.get_token()
+            self.__lexer.next()
+            
+            result = ParseTree(Operator.DECL, tok)
+            result.add_left(self.__parse_id())
+        elif self.__must_be(Token.ARRAY):
+            result = self.__parse_array_decl()
+            result.add_right(self.__parse_id())
+        return result
+
+    def __parse_array_decl(self):
+        """
+        < Array-Type >  ::= ARRAY OF < Simple-Type > WITH BOUNDS < Array-Bounds > 
+        """
+        self.__must_be(Token.ARRAY)
+        self.__lexer.next()
+        self.__must_be(Token.OF)
+        self.__lexer.next()
+
+        # Temporary way to handle the type specification
+        self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
+        typeToken = self.__lexer.get_token()
+        self.__lexer.next()
+
+        # check keyword sequence
+        self.__must_be(Token.WITH)
+        self.__lexer.next()
+        self.__must_be(Token.BOUNDS)
+        self.__lexer.next()
+
+        # get the bounds
+        bounds = self.__parse_array_bounds()
+
+        # assemble the parse tree
+        return ParseTree(Operator.ARRAY_DECL, typeToken, [bounds])
+
+
+    def __parse_array_bounds(self):
+        """
+        < Array-Bounds > ::= LBRACKET < Bounds-List > RBRACKET
+
+        < Bounds-List >  ::= < Bound > 
+                            | < Bounds-List > COMMA < Bound >
+
+        < Bound > ::= INTLIT 
+                    | INTLIT BSEP INTLIT
+        """
+        # opening bracket
+        self.__must_be(Token.LBRACKET)
         tok = self.__lexer.get_token()
         self.__lexer.next()
 
-        result = ParseTree(Operator.DECL, tok)
-        result.add_left(self.__parse_ref())
+        # build the bounds 
+        result = ParseTree(Operator.BOUNDS, tok)
+
+        # bounds list
+        done = False
+        while not done:
+            # get the bounds
+            self.__must_be(Token.INTLIT)
+            b = self.__lexer.get_token()
+            self.__lexer.next()
+            if self.__has(Token.BSEP):
+                self.__lexer.next()
+                self.__must_be(Token.INTLIT)
+                ub = self.__lexer.get_token()
+                self.__lexer.next()
+                lb = b
+            else:
+                ub = b
+                lb = TokenDetail(Token.INTLIT, "1", 1, ub.line, ub.col)
+
+            # add our bounds
+            lb = ParseTree(Operator.LIT, lb)
+            ub = ParseTree(Operator.LIT, ub)
+            result.add_right(lb)
+            result.add_right(ub)
+
+            if self.__has(Token.COMMA):
+                self.__lexer.next()
+            else:
+                done = True
+
+        # closing bracket
+        self.__must_be(Token.RBRACKET)
+        self.__lexer.next()
         return result
+
 
 
     def __parse_expression(self):
@@ -382,6 +471,45 @@ class Parser:
     def __parse_ref(self):
         """
         < Ref > ::= ID
+                    | ID LBRACKET < Index > RBRACKET
+        """
+        self.__must_be(Token.ID)
+        tok = self.__lexer.get_token()
+        self.__lexer.next()
+
+        if not self.__has(Token.LBRACKET):
+            # variable reference
+            return ParseTree(Operator.VAR, tok)
+        
+        # must be an array reference
+        self.__lexer.next() # consume the bracket
+        result = ParseTree(Operator.ARRAY_VAR, tok, self.__parse_index())
+        self.__must_be(Token.RBRACKET)
+        self.__lexer.next()
+        return result
+
+
+    def __parse_index(self):
+        """
+        < Index >       ::= < Index > COMMA < Expression >
+                            | < Expression >
+        NOTE: This does not return a parse tree, it returns a list of 
+              expressions.
+        """
+        # builds the initial result
+        e = self.__parse_expression()
+        result = [e]
+
+        while self.__has(Token.COMMA):
+            self.__lexer.next()
+            e = self.__parse_expression()
+            result.append(e)
+
+        return result
+    
+    def __parse_id(self):
+        """
+        Build a parse tree for an ID
         """
         self.__must_be(Token.ID)
         tok = self.__lexer.get_token()

@@ -56,7 +56,10 @@ Parser Grammar
                     | FLOATLIT
 
 < Ref >         ::= ID
-                    | ID LBRACKET < Expression > RBRACKET
+                    | ID LBRACKET < Index > RBRACKET
+
+< Index >       ::= < Index > COMMA < Expression >
+                    | < Expression >
 
 
 

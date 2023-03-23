@@ -9,6 +9,7 @@ from CalcParser import Parser,Operator
 class RefType(Enum):
     INT_VAR = auto()
     REAL_VAR = auto()
+    ARRAY_VAR = auto()
 
 class RefEntry:
     def __init__(self, value,ref_type):

@@ -31,6 +31,9 @@ class Token(Enum):  # a class which inherits enum
     RBRACKET = auto()
     COMMA = auto()
     BSEP = auto()
+    DOT = auto()
+    RECORD = auto()
+    END = auto()
 
 # Store the details of a token
 TokenDetail = namedtuple('TokenDetail', ('token', 
@@ -80,7 +83,7 @@ class Lexer:
             pass
         elif self.__lex_kw_or_id():
             pass
-        elif self.__lex_bsep():
+        elif self.__lex_bsep_or_dot():
             pass
         else:
             self.__consume()
@@ -215,7 +218,9 @@ class Lexer:
               'array': Token.ARRAY,
               'of': Token.OF,
               'with': Token.WITH,
-              'bounds' : Token.BOUNDS }
+              'bounds' : Token.BOUNDS,
+              'record' : Token.RECORD,
+              'end' : Token.END }
 
         # consume characters which match the pattern
         if self.__cur.isalpha() or self.__cur == '_':
@@ -235,7 +240,7 @@ class Lexer:
 
         return True
     
-    def __lex_bsep(self):
+    def __lex_bsep_or_dot(self):
         # control the number of periods we need to see
         if self.__in_bsep:
             n = 1
@@ -245,7 +250,11 @@ class Lexer:
 
         for i in range(n):
             if self.__cur != '.':
-                return False
+                if n < 1:
+                    return False
+                else:
+                    self.__set_token(Token.DOT)
+                    return True
             self.__consume()
         
         self.__lexeme = '..'

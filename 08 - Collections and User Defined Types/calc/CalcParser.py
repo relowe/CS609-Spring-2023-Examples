@@ -20,6 +20,9 @@ class Operator(Enum):
     DECL = auto()
     ARRAY_DECL = auto()
     BOUNDS = auto()
+    REC_DEF = auto()
+    REC_DECL = auto()
+    REC_ACCESS = auto()
 
 aryness = {
     Operator.PROG: math.inf,
@@ -36,7 +39,10 @@ aryness = {
     Operator.INPUT: 1,
     Operator.DECL: 1,
     Operator.ARRAY_DECL: 2,
-    Operator.BOUNDS: 0
+    Operator.BOUNDS: 0,
+    Operator.REC_DEF: 2,
+    Operator.REC_DECL: 2,
+    Operator.REC_ACCESS: 2,
 }
 
 class ParseTree:
@@ -159,6 +165,7 @@ class Parser:
         < Statement >   ::= < Input > NEWLINE
                             | < Var-Decl >
                             | < Ref > < Statement' > NEWLINE
+                            | < Record-Decl > NEWLINE
                             | < Expression > NEWLINE
                             | "" NEWLINE
         """
@@ -175,6 +182,8 @@ class Parser:
             if s2:
                 s2.add_left_leaf(result)
                 result = s2
+        elif self.__has(Token.RECORD):
+            result = self.__parse_record_decl()
         else:
             result = self.__parse_expression()
         if not self.__has(Token.NEWLINE):
@@ -239,7 +248,9 @@ class Parser:
 
     def __parse_array_decl(self):
         """
-        < Array-Type >  ::= ARRAY OF < Simple-Type > WITH BOUNDS < Array-Bounds > 
+        < Array-Type >  ::= ARRAY OF < Array-Type > WITH BOUNDS < Array-Bounds > 
+
+        < Array-Type >  ::= < Simple-Type > | RECORD ID 
         """
         self.__must_be(Token.ARRAY)
         self.__lexer.next()
@@ -315,7 +326,74 @@ class Parser:
         self.__lexer.next()
         return result
 
+    def __parse_record_decl(self):
+        """
+        < Record-Decl > ::= RECORD ID NEWLINE < Field-List > END
+                            | RECORD ID ID
+        """
+        # get the token and the tag
+        self.__must_be(Token.RECORD)
+        tok = self.__lexer.get_token()
+        self.__lexer.next()
+        self.__must_be(Token.ID)
+        tag = self.__lexer.get_token()
+        self.__lexer.next()
 
+        if self.__has(Token.ID):
+            # declaration of a record variable
+            self.__must_be(Token.ID)
+            id = self.__lexer.get_token()
+            self.__lexer.next()
+            return self.__build_record_var_decl(tok, tag, id)
+        else:
+            # record definition
+            self.__must_be(Token.NEWLINE)
+            self.__lexer.next()
+            fields = self.__parse_field_list()
+            self.__must_be(Token.END)
+            self.__lexer.next()
+            result = ParseTree(Operator.REC_DEF, tok)
+            result.add_right(ParseTree(Operator.VAR, tag))
+            result.add_right(fields)
+            return result
+    
+    def __build_record_var_decl(self, tok, tag, id):
+        result = ParseTree(Operator.REC_DEF, tok)
+        result.add_right(ParseTree(Operator.VAR, tag))
+        result.add_right(ParseTree(Operator.VAR, id))
+        return result
+
+    def __parse_field_list(self):
+        """
+        < Field-List >  ::= < Field-List > < Field-Decl > NEWLINE
+                            | < Field-Decl > NEWLINE
+        """
+        result = ParseTree(Operator.DECL, self.__lexer.get_token())
+        while not self.__has(Token.END):
+            result.add_right(self.__parse_field_decl())
+            self.__must_be(Token.NEWLINE)
+            self.__lexer.next()
+        
+        return result
+
+
+    def __parse_field_decl(self):
+        """
+        < Field-Decl >  ::= < Var-Decl >
+                         | RECORD ID ID
+        """
+        if self.__has(Token.RECORD):
+            tok = self.__lexer.get_token()
+            self.__lexer.next()
+            self.__must_be(Token.ID)
+            tag = self.__lexer.get_token()
+            self.__lexer.next()
+            self.__must_be(Token.ID)
+            id = self.__lexer.get_token()
+            self.__lexer.next()
+            return self.__build_record_var_decl(tok, tag, id)
+        else:
+            return self.__parse_var_decl()
 
     def __parse_expression(self):
         """
@@ -470,22 +548,27 @@ class Parser:
 
     def __parse_ref(self):
         """
-        < Ref > ::= ID
-                    | ID LBRACKET < Index > RBRACKET
+        < Ref >         ::= ID < Ref' >
+
+        < Ref' >        ::= LBRACKET < Index > RBRACKET
+                            DOT < Ref > 
         """
         self.__must_be(Token.ID)
         tok = self.__lexer.get_token()
         self.__lexer.next()
 
-        if not self.__has(Token.LBRACKET):
-            # variable reference
-            return ParseTree(Operator.VAR, tok)
+        if self.__has(Token.LBRACKET):
+            self.__lexer.next() # consume the bracket
+            result = ParseTree(Operator.ARRAY_VAR, tok, self.__parse_index())
+            self.__must_be(Token.RBRACKET)
+            self.__lexer.next()
+        elif self.__has(Token.DOT):
+            self.__lexer.next()
+            result = ParseTree(Operator.REC_ACCESS, tok)
+            result.add_right(self.__parse_ref())
+        else:
+            result = ParseTree(Operator.VAR, tok)
         
-        # must be an array reference
-        self.__lexer.next() # consume the bracket
-        result = ParseTree(Operator.ARRAY_VAR, tok, self.__parse_index())
-        self.__must_be(Token.RBRACKET)
-        self.__lexer.next()
         return result
 
 

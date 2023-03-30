@@ -1,0 +1,16 @@
+record point
+  real x
+  real y
+end
+
+record pair
+  record point p1
+  record point p2
+end
+
+record point p
+record pair pair
+real x
+x = 5
+p.x = 5
+pair.p1.x = 6

@@ -6,6 +6,7 @@ Parser Grammar
 < Statement >   ::= < Input > NEWLINE
                     | < Var-Decl >
                     | < Ref > < Statement' > NEWLINE
+                    | < Record-Decl > NEWLINE
                     | < Expression > NEWLINE
                     | "" NEWLINE
 
@@ -18,7 +19,7 @@ Parser Grammar
 < Var-Decl >    ::= < Simple-Type > ID
                     | < Array-Type > ID
 
-< Array-Type >  ::= ARRAY OF < Simple-Type > WITH BOUNDS < Array-Bounds > 
+< Array-Type >  ::= ARRAY OF < Array-Type > WITH BOUNDS < Array-Bounds > 
 
 < Array-Bounds > ::= LBRACKET < Bounds-List > RBRACKET
 
@@ -28,7 +29,18 @@ Parser Grammar
 < Bound > ::= INTLIT 
               | INTLIT BSEP INTLIT
 
-< Simple-Type > ::= INTEGER | REAL
+< Simple-Type > ::= INTEGER | REAL 
+
+< Array-Type >  ::= < Simple-Type > | RECORD ID
+
+< Record-Decl > ::= RECORD ID NEWLINE < Field-List > END
+                    | RECORD ID ID
+
+< Field-List >  ::= < Field-List > < Field-Decl > NEWLINE
+                    | < Field-Decl > NEWLINE
+
+< Field-Decl >  ::= < Var-Decl >
+                    | RECORD ID ID
 
 < Expression >  ::= < Term > < Expression' >
 
@@ -55,8 +67,11 @@ Parser Grammar
 < Number >      ::= INTLIT
                     | FLOATLIT
 
-< Ref >         ::= ID
-                    | ID LBRACKET < Index > RBRACKET
+< Ref >         ::= ID < Ref' >
+
+< Ref' >        ::= LBRACKET < Index > RBRACKET
+                    DOT < Ref > 
+
 
 < Index >       ::= < Index > COMMA < Expression >
                     | < Expression >
@@ -91,6 +106,9 @@ LBRACKET    [
 RBRACKET    ]
 COMMA       ,
 BSEP        ..
+DOT         .
+RECORD      record
+END         end
 COMMENT      # to the end of the line 
   - Note: We will not make a comment token. Lexer skips the comments
 

@@ -258,7 +258,10 @@ class Parser:
         self.__lexer.next()
 
         # Temporary way to handle the type specification
-        self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
+        if self.__has(Token.RECORD):
+            self.__lexer.next()
+        else:
+            self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
         typeToken = self.__lexer.get_token()
         self.__lexer.next()
 
@@ -358,7 +361,7 @@ class Parser:
             return result
     
     def __build_record_var_decl(self, tok, tag, id):
-        result = ParseTree(Operator.REC_DEF, tok)
+        result = ParseTree(Operator.REC_DECL, tok)
         result.add_right(ParseTree(Operator.VAR, tag))
         result.add_right(ParseTree(Operator.VAR, id))
         return result
@@ -550,8 +553,9 @@ class Parser:
         """
         < Ref >         ::= ID < Ref' >
 
-        < Ref' >        ::= LBRACKET < Index > RBRACKET
-                            DOT < Ref > 
+        < Ref' >        ::= LBRACKET < Index > RBRACKET < Ref' >
+                            | DOT < Ref > 
+                            | ""
         """
         self.__must_be(Token.ID)
         tok = self.__lexer.get_token()
@@ -562,13 +566,17 @@ class Parser:
             result = ParseTree(Operator.ARRAY_VAR, tok, self.__parse_index())
             self.__must_be(Token.RBRACKET)
             self.__lexer.next()
-        elif self.__has(Token.DOT):
-            self.__lexer.next()
-            result = ParseTree(Operator.REC_ACCESS, tok)
-            result.add_right(self.__parse_ref())
         else:
             result = ParseTree(Operator.VAR, tok)
-        
+
+        if self.__has(Token.DOT):
+            # get and consume the dot
+            ra = ParseTree(Operator.REC_ACCESS, self.__lexer.get_token())
+            self.__lexer.next()
+
+            ra.add_left(result)
+            ra.add_right(self.__parse_ref())
+            result = ra
         return result
 
 

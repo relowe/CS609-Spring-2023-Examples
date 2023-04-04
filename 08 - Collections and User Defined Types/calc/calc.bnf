@@ -69,8 +69,9 @@ Parser Grammar
 
 < Ref >         ::= ID < Ref' >
 
-< Ref' >        ::= LBRACKET < Index > RBRACKET
+< Ref' >        ::= LBRACKET < Index > RBRACKET < Ref' >
                     DOT < Ref > 
+                    | ""
 
 
 < Index >       ::= < Index > COMMA < Expression >

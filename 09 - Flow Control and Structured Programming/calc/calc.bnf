@@ -1,0 +1,139 @@
+Parser Grammar
+==============
+< Program >     ::= < Program > < Statement > 
+                    | < Statement >
+
+< Statement >   ::= < Input > NEWLINE
+                    | < Var-Decl >
+                    | < Ref > < Statement' > NEWLINE
+                    | < Record-Decl > NEWLINE
+                    | < Expression > NEWLINE
+                    | "" NEWLINE
+
+< Statement' >  ::= < Expression'>    
+                    | EQUAL < Expression >
+                    | ""
+
+< Input >       ::= INPUT < Ref >
+
+< Var-Decl >    ::= < Simple-Type > ID
+                    | < Array-Type > ID
+
+< Array-Type >  ::= ARRAY OF < Array-Type > WITH BOUNDS < Array-Bounds > 
+
+< Array-Bounds > ::= LBRACKET < Bounds-List > RBRACKET
+
+< Bounds-List >  ::= < Bound > 
+                     | < Bounds-List > COMMA < Bound >
+
+< Bound > ::= INTLIT 
+              | INTLIT BSEP INTLIT
+
+< Simple-Type > ::= INTEGER | REAL 
+
+< Array-Type >  ::= < Simple-Type > | RECORD ID
+
+< Record-Decl > ::= RECORD ID NEWLINE < Field-List > END
+                    | RECORD ID ID
+
+< Field-List >  ::= < Field-List > < Field-Decl > NEWLINE
+                    | < Field-Decl > NEWLINE
+
+< Field-Decl >  ::= < Var-Decl >
+                    | RECORD ID ID
+
+< Expression >  ::= < Term > < Expression' >
+
+< Expression' > ::= PLUS < Term > < Expression' >
+                    | MINUS < Term > < Expression' >
+                    | ""
+
+< Term >        ::= < Factor > < Term' >
+
+< Term' >       ::= TIMES < Factor > < Term' >
+                    | DIVIDE < Factor > < Term' >
+                    | ""
+
+< Factor >      ::= < Exp > < Factor' >
+
+< Factor'>          POW < Factor >
+                    | ""
+
+< Exp >         ::= LPAREN  < Expression > RPAREN
+                    | MINUS < Exp > 
+                    | < Number >
+                    | < Ref >                                       
+
+< Number >      ::= INTLIT
+                    | FLOATLIT
+
+< Ref >         ::= ID < Ref' >
+
+< Ref' >        ::= LBRACKET < Index > RBRACKET < Ref' >
+                    DOT < Ref > 
+                    | ""
+
+
+< Index >       ::= < Index > COMMA < Expression >
+                    | < Expression >
+
+
+
+
+Lexer Grammar
+=============
+Token       Pattern
+-------     -------
+NEWLINE     \n
+PLUS        +
+MINUS       -
+TIMES       *
+DIVIDE      /
+POW         ^
+LPAREN      (
+RPAREN      )
+EQUAL       =
+INTLIT      [0-9]+ (a string of digits)
+FLOATLIT    INTLIT . INTLIT
+ID          [a-zA-Z_][a-zA-Z0-9_]*
+INPUT       input
+INTEGER     integer
+REAL        real
+ARRAY       array
+OF          of
+WITH        with
+BOUNDS      bounds
+LBRACKET    [
+RBRACKET    ]
+COMMA       ,
+BSEP        ..
+DOT         .
+RECORD      record
+END         end
+COMMENT      # to the end of the line 
+  - Note: We will not make a comment token. Lexer skips the comments
+
+
+First and Follow
+================
+First(Program) = First(Statement)
+
+First(Statement) = First(Expression)
+
+First(Expression) = First(Expression') 
+
+First(Expression') = {PLUS, MINUS, First(TERM), ""}
+
+
+
+Follow(Program) = {EOF}
+
+Follow(Statement) = {First(Statement), EOF}
+
+Follow(Expression) = {NEWLINE}
+
+Rules of Expression'
+--------------------
+First( PLUS < Term > < E' >) = {PLUS}
+First( MINUS < Term > < E' >) = {MINUS}
+First("") = {""}

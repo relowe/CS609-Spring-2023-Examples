@@ -1,0 +1,23 @@
+record point
+  real x
+  real y
+end
+
+record pair
+  record point p1
+  record point p2
+end
+
+record pair p
+p.p1.x = 4
+p.p1.y = 5
+p.p2.x = 6
+p.p2.y = 7
+
+p.p1.x
+p.p1.y
+p.p2.x
+p.p2.y
+
+p=7
+p

@@ -23,6 +23,8 @@ class Operator(Enum):
     REC_DEF = auto()
     REC_DECL = auto()
     REC_ACCESS = auto()
+    IF = auto()
+    WHILE = auto()
 
 aryness = {
     Operator.PROG: math.inf,
@@ -43,6 +45,8 @@ aryness = {
     Operator.REC_DEF: 2,
     Operator.REC_DECL: 2,
     Operator.REC_ACCESS: 2,
+    Operator.IF: 2,
+    Operator.WHILE: 2
 }
 
 class ParseTree:
@@ -152,7 +156,7 @@ class Parser:
         """
         result = ParseTree(Operator.PROG)
 
-        while not self.__has(Token.EOF):
+        while not self.__has(Token.EOF) and not self.__has(Token.END):
             statement = self.__parse_statement()
             if statement:
                 result.add_right(statement)
@@ -166,6 +170,8 @@ class Parser:
                             | < Var-Decl >
                             | < Ref > < Statement' > NEWLINE
                             | < Record-Decl > NEWLINE
+                            | < Branch > NEWLINE
+                            | < Loop > NEWLINE
                             | < Expression > NEWLINE
                             | "" NEWLINE
         """
@@ -184,6 +190,10 @@ class Parser:
                 result = s2
         elif self.__has(Token.RECORD):
             result = self.__parse_record_decl()
+        elif self.__has(Token.IF):
+            result = self.__parse_branch()
+        elif self.__has(Token.WHILE):
+            result = self.__parse_loop()
         else:
             result = self.__parse_expression()
         if not self.__has(Token.NEWLINE):
@@ -214,6 +224,60 @@ class Parser:
                     result2.add_left_leaf(result)
                 result = result2
             return result
+    
+    def __parse_branch(self):
+        """
+        < Branch >      ::= IF < Expression > THEN NEWLINE < Program > END
+        """
+        # get the if token
+        self.__must_be(Token.IF)
+        tok = self.__lexer.get_token()
+        self.__lexer.next() 
+
+        #get the condition
+        condition = self.__parse_expression()
+
+        # advance through the tokens
+        self.__must_be(Token.THEN)
+        self.__lexer.next()
+        self.__must_be(Token.NEWLINE)
+        self.__lexer.next()
+
+        # get the body
+        body = self.__parse_program()
+
+        # get the end
+        self.__must_be(Token.END)
+        self.__lexer.next()
+
+        return ParseTree(Operator.IF, tok, [condition, body])
+
+    def __parse_loop(self):
+        """
+        < Loop >        ::= WHILE < Expression > DO NEWLINE < Program > END
+        """
+        # get the if token
+        self.__must_be(Token.WHILE)
+        tok = self.__lexer.get_token()
+        self.__lexer.next() 
+
+        #get the condition
+        condition = self.__parse_expression()
+
+        # advance through the tokens
+        self.__must_be(Token.DO)
+        self.__lexer.next()
+        self.__must_be(Token.NEWLINE)
+        self.__lexer.next()
+
+        # get the body
+        body = self.__parse_program()
+
+        # get the end
+        self.__must_be(Token.END)
+        self.__lexer.next()
+
+        return ParseTree(Operator.WHILE, tok, [condition, body])
 
     def __parse_input(self):
         """

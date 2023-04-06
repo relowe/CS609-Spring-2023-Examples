@@ -140,6 +140,10 @@ def eval_tree(tree, env):
         return eval_rec_decl(tree, env)
     elif tree.op == Operator.REC_ACCESS:
         return eval_rec_access(tree, env)
+    elif tree.op == Operator.IF:
+        return eval_if(tree, env)
+    elif tree.op == Operator.WHILE:
+        return eval_while(tree, env)
 
 def eval_program(tree, env):
     # semantic behavior for now is we print the result of every statement
@@ -228,6 +232,7 @@ def eval_assign(tree, env):
 
     # get the name
     name = var_tree.token.lexeme
+
 
     # lookup the variable
     var = var_env.get(name)
@@ -319,6 +324,20 @@ def eval_rec_access(tree, env):
     rec_env = eval_tree(tree.children[0], env)    
 
     return eval_tree(tree.children[1], rec_env)
+
+def eval_if(tree, env):
+    condition = tree.children[0]
+    body = tree.children[1]
+
+    if eval_tree(condition, env) != 0:
+        eval_tree(body, env)
+
+def eval_while(tree, env):
+    condition = tree.children[0]
+    body = tree.children[1]
+
+    while eval_tree(condition, env) != 0:
+        eval_tree(body, env)
 
 ################ Helper Functions ########################
 def get_record_env(tree, env):

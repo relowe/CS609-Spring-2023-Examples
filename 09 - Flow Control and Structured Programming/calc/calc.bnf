@@ -7,12 +7,18 @@ Parser Grammar
                     | < Var-Decl >
                     | < Ref > < Statement' > NEWLINE
                     | < Record-Decl > NEWLINE
+                    | < Branch > NEWLINE
+                    | < Loop > NEWLINE
                     | < Expression > NEWLINE
                     | "" NEWLINE
 
 < Statement' >  ::= < Expression'>    
                     | EQUAL < Expression >
                     | ""
+
+< Branch >      ::= IF < Expression > THEN NEWLINE < Program > END
+
+< Loop >        ::= WHILE < Expression > DO NEWLINE < Program > END
 
 < Input >       ::= INPUT < Ref >
 
@@ -110,6 +116,10 @@ BSEP        ..
 DOT         .
 RECORD      record
 END         end
+IF          if
+THEN        then
+WHILE       while
+DO          do
 COMMENT      # to the end of the line 
   - Note: We will not make a comment token. Lexer skips the comments
 

@@ -59,6 +59,7 @@ class RefType(Enum):
     INT_VAR = auto()
     REAL_VAR = auto()
     ARRAY_VAR = auto()
+    RECORD_VAR = auto()
 
 
 class RefEntry:
@@ -97,6 +98,11 @@ class ReferenceEnvironment:
         else:
             # upstream variable
             return self.__parent.set(sym, value)
+    
+    def print_sym(self):
+        print(self.__sym)
+        if self.__parent:
+            self.__parent.print_sym()
 
 
 def eval_tree(tree, env):
@@ -128,6 +134,12 @@ def eval_tree(tree, env):
         return eval_array_decl(tree, env)
     elif tree.op == Operator.ARRAY_VAR:
         return eval_array_var(tree, env)
+    elif tree.op == Operator.REC_DEF:
+        return eval_rec_def(tree, env)
+    elif tree.op == Operator.REC_DECL:
+        return eval_rec_decl(tree, env)
+    elif tree.op == Operator.REC_ACCESS:
+        return eval_rec_access(tree, env)
 
 def eval_program(tree, env):
     # semantic behavior for now is we print the result of every statement
@@ -206,11 +218,19 @@ def eval_input(tree, env):
 
 
 def eval_assign(tree, env):
+    if tree.children[0].op == Operator.REC_ACCESS:
+        # record access
+        var_tree, var_env = get_record_env(tree.children[0], env)
+    else:
+        # variable assignment
+        var_tree = tree.children[0]
+        var_env = env
+
     # get the name
-    name = tree.children[0].token.lexeme
+    name = var_tree.token.lexeme
 
     # lookup the variable
-    var = env.get(name)
+    var = var_env.get(name)
     if var == None:
         runtime_error(tree, f"Assignment to undeclared variable {name}")
 
@@ -222,7 +242,7 @@ def eval_assign(tree, env):
     elif var.ref_type == RefType.REAL_VAR:
         value = float(value)
 
-    assign(tree.children[0], value, env)
+    assign(var_tree, value, var_env)
 
 def eval_decl(tree, env):
     # get the type
@@ -260,7 +280,59 @@ def eval_array_decl(tree, env):
     declare_name(name, value, env)
 
 
+def eval_rec_def(tree, env):
+    # get the tag and build the record name
+    tag = tree.children[0].token.lexeme
+    name = f"record {tag}"
+    rec_env = ReferenceEnvironment()
+
+    # define our fields
+    for decl in tree.children[1].children:
+        if decl.op == Operator.REC_DECL:
+            eval_rec_decl(decl, rec_env, env)
+        else:
+            eval_tree(decl, rec_env)
+
+    # add the definition to the environment
+    declare_name(name, rec_env, env)    
+
+
+def eval_rec_decl(tree, env, type_env=None):
+    if type_env == None:
+        type_env = env
+    
+    # form the record name
+    tag = tree.children[0].token.lexeme
+    name = f"record {tag}"
+
+    # retrieve record definition
+    rec_def = copy.deepcopy(type_env.get(name))
+    if rec_def == None:
+        runtime_error(tree, f"Undefined {name}")
+    
+    # insert into our environment
+    value = RefEntry(rec_def, RefType.RECORD_VAR)
+    declare_name(tree.children[1].token.lexeme, value, env)
+
+def eval_rec_access(tree, env):
+    # get the record itself
+    rec_env = eval_tree(tree.children[0], env)    
+
+    return eval_tree(tree.children[1], rec_env)
+
 ################ Helper Functions ########################
+def get_record_env(tree, env):
+    """
+    Find the environment of the final record
+    Return
+        tree, rec_env where tree is the field being accessed
+    """
+    rec_env = eval_tree(tree.children[0], env)
+    field_tree = tree.children[1]
+    if field_tree.op == Operator.REC_ACCESS:
+        field_tree, rec_env = get_record_env(field_tree, rec_env)
+    return field_tree, rec_env
+
 def assign(tree, value, env):
     if tree.op == Operator.VAR:
         assign_var(tree, value, env)

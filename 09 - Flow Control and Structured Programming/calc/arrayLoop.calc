@@ -1,0 +1,15 @@
+array of integer with bounds [10] ar
+
+# fill the array with 20 through 30
+integer i
+i = 0
+while i-11 do
+  ar[i] = i+19
+  i = i+1
+end
+
+i=0
+while i-11 do
+    ar[i]
+    i = i+1
+end

@@ -1,0 +1,19 @@
+Variables
+- A variable must be declared before it is used.
+- All variable names must be unique (no re-declaration)
+- Numeric variables are assigned a zero at declaration time
+- A variable can have one of the following types:
+    - integer
+    - real
+- On assignment, all values are coerced into the variable type.
+    ex:
+        real x
+        integer y
+
+        x = 1.5
+        y = x
+
+    This is valid, and x will have the value of 1
+
+- All expressions are computed in real mode and then cast to integers on 
+  assignment.

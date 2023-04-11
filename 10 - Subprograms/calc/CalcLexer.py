@@ -38,6 +38,8 @@ class Token(Enum):  # a class which inherits enum
     THEN = auto()
     WHILE = auto()
     DO = auto()
+    FUNCTION = auto()
+    RETURNS = auto()
 
 # Store the details of a token
 TokenDetail = namedtuple('TokenDetail', ('token', 
@@ -228,7 +230,9 @@ class Lexer:
               'if' : Token.IF,
               'then': Token.THEN,
               'while' : Token.WHILE,
-              'do': Token.DO }
+              'do': Token.DO,
+              'function': Token.FUNCTION,
+              'returns': Token.RETURNS }
 
         # consume characters which match the pattern
         if self.__cur.isalpha() or self.__cur == '_':

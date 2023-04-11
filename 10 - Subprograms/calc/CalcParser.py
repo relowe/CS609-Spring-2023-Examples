@@ -25,6 +25,8 @@ class Operator(Enum):
     REC_ACCESS = auto()
     IF = auto()
     WHILE = auto()
+    FUNDEF = auto()
+    FUNCALL = auto()
 
 aryness = {
     Operator.PROG: math.inf,
@@ -173,6 +175,7 @@ class Parser:
                             | < Branch > NEWLINE
                             | < Loop > NEWLINE
                             | < Expression > NEWLINE
+                            | < Function-Definition > NEWLINE
                             | "" NEWLINE
         """
         if self.__has(Token.INPUT):
@@ -194,6 +197,8 @@ class Parser:
             result = self.__parse_branch()
         elif self.__has(Token.WHILE):
             result = self.__parse_loop()
+        elif self.__has(Token.FUNCTION):
+            result = self.__parse_function_definition()
         else:
             result = self.__parse_expression()
         if not self.__has(Token.NEWLINE):
@@ -201,6 +206,46 @@ class Parser:
         self.__lexer.next()     # when we match a token, we should consume it
 
         return result
+
+
+    def __parse_function_definition(self):
+        """
+        < Function-Definition > ::= FUNCTION ID LPAREN < Parameter-List > RPAREN RETURNS < Simple-Type > NEWLINE < Program > END
+        """
+        # get the function token
+        self.__must_be(Token.FUNCTION)
+        tok = self.__lexer.get_token()
+        self.__lexer.next()
+
+        # get the id
+        self.__must_be(Token.ID)
+        id = self.__lexer.get_token()
+        self.__lexer.__next()
+
+        # check parens
+        self.__must_be(Token.LPAREN)
+        self.__lexer.next()
+
+        # get parameters
+        params = self.__parse_parameter_list()
+
+        # check parens
+        self.__must_be(Token.RPAREN)
+        self.__lexer.next()
+
+        # check for returns
+        self.__must_be(Token.RETURNS)
+
+
+    def __parse_parameter_list(self):
+        """
+        < Parameter-List > ::= < Parameter-List > COMMA < Parmeter-List' >
+                            | < Parameter-List' >
+
+        < Parameter-List' > ::= < Array-Decl > ID
+                                | < Array-Type > ID
+        """
+        pass
     
 
     def __parse_statement2(self):
@@ -627,7 +672,7 @@ class Parser:
 
         if self.__has(Token.LBRACKET):
             self.__lexer.next() # consume the bracket
-            result = ParseTree(Operator.ARRAY_VAR, tok, self.__parse_index())
+            result = ParseTree(Operator.ARRAY_VAR, tok, self.__parse_arg_list())
             self.__must_be(Token.RBRACKET)
             self.__lexer.next()
         else:
@@ -644,9 +689,9 @@ class Parser:
         return result
 
 
-    def __parse_index(self):
+    def __parse_arg_list(self):
         """
-        < Index >       ::= < Index > COMMA < Expression >
+        < Arg-List >       ::= < Arg-List > COMMA < Expression >
                             | < Expression >
         NOTE: This does not return a parse tree, it returns a list of 
               expressions.

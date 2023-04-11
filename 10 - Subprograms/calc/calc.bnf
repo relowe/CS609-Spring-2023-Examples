@@ -10,11 +10,21 @@ Parser Grammar
                     | < Branch > NEWLINE
                     | < Loop > NEWLINE
                     | < Expression > NEWLINE
+                    | < Function-Definition > NEWLINE
                     | "" NEWLINE
 
 < Statement' >  ::= < Expression'>    
                     | EQUAL < Expression >
                     | ""
+
+< Function-Definition > ::= FUNCTION ID LPAREN < Parameter-List > RPAREN RETURNS < Simple-Type > NEWLINE < Program > END
+
+< Parameter-List > ::= < Parameter-List > COMMA < Parmeter-List' >
+                       | < Parameter-List' >
+
+< Parameter-List' > ::= < Array-Decl > ID
+                        | < Array-Type > ID
+                        
 
 < Branch >      ::= IF < Expression > THEN NEWLINE < Program > END
 
@@ -23,9 +33,9 @@ Parser Grammar
 < Input >       ::= INPUT < Ref >
 
 < Var-Decl >    ::= < Simple-Type > ID
-                    | < Array-Type > ID
+                    | < Array-Decl > ID
 
-< Array-Type >  ::= ARRAY OF < Array-Type > WITH BOUNDS < Array-Bounds > 
+< Array-Decl >  ::= ARRAY OF < Array-Type > WITH BOUNDS < Array-Bounds > 
 
 < Array-Bounds > ::= LBRACKET < Bounds-List > RBRACKET
 
@@ -75,12 +85,13 @@ Parser Grammar
 
 < Ref >         ::= ID < Ref' >
 
-< Ref' >        ::= LBRACKET < Index > RBRACKET < Ref' >
-                    DOT < Ref > 
+< Ref' >        ::= LBRACKET < Arg-List > RBRACKET < Ref' >
+                    |DOT < Ref > 
+                    |LPAREN < Arg-List > RPAREN
                     | ""
 
 
-< Index >       ::= < Index > COMMA < Expression >
+< Arg-List >    ::= < Arg-List > COMMA < Expression >
                     | < Expression >
 
 
@@ -120,6 +131,8 @@ IF          if
 THEN        then
 WHILE       while
 DO          do
+FUNCTION    function
+RETURNS     returns
 COMMENT      # to the end of the line 
   - Note: We will not make a comment token. Lexer skips the comments
 

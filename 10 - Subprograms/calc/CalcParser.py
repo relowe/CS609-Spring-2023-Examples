@@ -27,6 +27,7 @@ class Operator(Enum):
     WHILE = auto()
     FUNDEF = auto()
     FUNCALL = auto()
+    FUNTYPE = auto()
 
 aryness = {
     Operator.PROG: math.inf,
@@ -48,7 +49,10 @@ aryness = {
     Operator.REC_DECL: 2,
     Operator.REC_ACCESS: 2,
     Operator.IF: 2,
-    Operator.WHILE: 2
+    Operator.WHILE: 2,
+    Operator.FUNDEF: 4,
+    Operator.FUNCALL: 2,
+    Operator.FUNTYPE: 0
 }
 
 class ParseTree:
@@ -219,8 +223,8 @@ class Parser:
 
         # get the id
         self.__must_be(Token.ID)
-        id = self.__lexer.get_token()
-        self.__lexer.__next()
+        id = ParseTree(Operator.VAR, self.__lexer.get_token())
+        self.__lexer.next()
 
         # check parens
         self.__must_be(Token.LPAREN)
@@ -235,6 +239,20 @@ class Parser:
 
         # check for returns
         self.__must_be(Token.RETURNS)
+        self.__lexer.next()
+
+        # get the return type
+        self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
+        return_type = ParseTree(Operator.FUNTYPE, self.__lexer.get_token())
+        self.__lexer.next()
+
+        # get the function body
+        body = self.__parse_program()
+        self.__must_be(Token.END)
+        self.__lexer.next()
+
+        # return the function
+        return ParseTree(Operator.FUNDEF, tok, [id, params, return_type, body])
 
 
     def __parse_parameter_list(self):
@@ -245,7 +263,22 @@ class Parser:
         < Parameter-List' > ::= < Array-Decl > ID
                                 | < Array-Type > ID
         """
-        pass
+        done = False
+        params = []
+        tok = self.__lexer.get_token()
+
+        while not done:
+            if self.__has(Token.ARRAY):
+                p = self.__parse_array_decl()
+            else:
+                p = self.__parse_var_decl()
+            params.append(p)
+
+            if self.__has(Token.COMMA):
+                self.__lexer.next()
+            else:
+                done = True
+        return ParseTree(Operator.ARRAY_VAR, tok, params)
     
 
     def __parse_statement2(self):
@@ -664,6 +697,7 @@ class Parser:
 
         < Ref' >        ::= LBRACKET < Index > RBRACKET < Ref' >
                             | DOT < Ref > 
+                            | LPAREN < Arg-List > RPAREN
                             | ""
         """
         self.__must_be(Token.ID)
@@ -686,6 +720,14 @@ class Parser:
             ra.add_left(result)
             ra.add_right(self.__parse_ref())
             result = ra
+        elif self.__has(Token.LPAREN):
+            tok = self.__lexer.get_token()
+            self.__lexer.next()
+            args = self.__parse_arg_list()
+            args = ParseTree(Operator.ARRAY_VAR, tok, args)
+            self.__must_be(Token.RPAREN)
+            self.__lexer.next()
+            result = ParseTree(Operator.FUNCALL, tok, [result, args])
         return result
 
 

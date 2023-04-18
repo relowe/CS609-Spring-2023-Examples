@@ -7,6 +7,12 @@ from CalcLexer import Lexer,Token
 from CalcParser import Parser,Operator
 import copy
 
+class CalcFunction:
+    def __init__(self, parameters, return_type, body):
+        self.parameters = parameters
+        self.return_type = return_type
+        self.body = body
+
 class CalcArray:
     def __init__(self, bounds, ref_type):
         """
@@ -60,6 +66,8 @@ class RefType(Enum):
     REAL_VAR = auto()
     ARRAY_VAR = auto()
     RECORD_VAR = auto()
+    FUNCTION = auto()
+
 
 
 class RefEntry:
@@ -78,6 +86,13 @@ class ReferenceEnvironment:
         # our enclosing environment
         self.__parent = parent
     
+    def isLocal(self, sym):
+        """
+        Return true if sym is local to this nested environment
+        """
+        return sym in self.__sym
+
+
     def get(self, sym):
         """
         Return the associated symbol, return None if not found.
@@ -87,7 +102,7 @@ class ReferenceEnvironment:
         elif self.__parent:
             return self.__parent.get(sym)
         return None
-    
+
     def set(self, sym, value):
         if self.get(sym) == None:
             # new variable
@@ -144,14 +159,21 @@ def eval_tree(tree, env):
         return eval_if(tree, env)
     elif tree.op == Operator.WHILE:
         return eval_while(tree, env)
+    elif tree.op == Operator.FUNDEF:
+        return eval_fundef(tree, env)
+    elif tree.op == Operator.FUNCALL:
+        return eval_funcall(tree, env)
 
 def eval_program(tree, env):
     # semantic behavior for now is we print the result of every statement
     # that returns a result
+    result = None
     for child in tree.children:
-        result = eval_tree(child, env)
-        if result != None:
+        value = eval_tree(child, env)
+        if value != None:
+            result = value
             print(result)
+    return result
 
 
 def eval_add(tree, env):
@@ -263,7 +285,7 @@ def eval_decl(tree, env):
     value = RefEntry(init, ref_type)
 
     # insert into our env
-    declare_name(name, value, env)
+    declare_name(tree, name, value, env)
 
 
 def eval_array_decl(tree, env):
@@ -282,7 +304,7 @@ def eval_array_decl(tree, env):
 
     # attempt to insert the array
     value = RefEntry(ar, RefType.ARRAY_VAR)
-    declare_name(name, value, env)
+    declare_name(tree, name, value, env)
 
 
 def eval_rec_def(tree, env):
@@ -299,7 +321,7 @@ def eval_rec_def(tree, env):
             eval_tree(decl, rec_env)
 
     # add the definition to the environment
-    declare_name(name, rec_env, env)    
+    declare_name(tree, name, rec_env, env)    
 
 
 def eval_rec_decl(tree, env, type_env=None):
@@ -317,7 +339,7 @@ def eval_rec_decl(tree, env, type_env=None):
     
     # insert into our environment
     value = RefEntry(rec_def, RefType.RECORD_VAR)
-    declare_name(tree.children[1].token.lexeme, value, env)
+    declare_name(tree, tree.children[1].token.lexeme, value, env)
 
 def eval_rec_access(tree, env):
     # get the record itself
@@ -338,6 +360,75 @@ def eval_while(tree, env):
 
     while eval_tree(condition, env) != 0:
         eval_tree(body, env)
+
+
+def eval_fundef(tree, env):
+    # get the name
+    name = tree.children[0].token.lexeme
+
+    # get the parameters
+    params = tree.children[1].children
+
+    # get the return type
+    tok = tree.children[2].token.token
+    if tok == Token.INTEGER:
+        return_type = RefType.INT_VAR
+    elif tok == Token.REAL:
+        return_type = RefType.REAL_VAR
+    else:
+        return_type = None
+    
+    # get the body
+    body = tree.children[3]
+
+    # build the function object
+    f = CalcFunction(params, return_type, body)
+    value = RefEntry(f, RefType.FUNCTION)
+    declare_name(tree, name, value, env)
+
+
+def eval_funcall(tree, env):
+    # get the name of the function
+    name = tree.children[0].token.lexeme
+
+    # retrieve the function
+    entry = env.get(name)
+    if entry == None or entry.ref_type != RefType.FUNCTION:
+        runtime_error(tree, f"{name} is not a function.")
+    fun = entry.value
+    
+    # verify the number of arguments
+    arg_expressions = tree.children[1].children
+    if len(arg_expressions) != len(fun.parameters):
+        runtime_error(tree, f"Incorrect number of arguments to {name}")
+    
+    # create the local environment and bind the arguments
+    local = ReferenceEnvironment(env)
+    for i in range(len(fun.parameters)):
+        p = fun.parameters[i]
+        if p.op == Operator.DECL:
+            # this is by copy of evaluation (pass by value)
+            eval_decl(p, local)
+            value = eval_tree(arg_expressions[i], env)
+            assign_var(p.children[0], value, local)
+        else:
+            # pass by preference
+            name = p.children[1].token.lexeme
+            value = env.get(arg_expressions[i])
+            if value == None:
+                runtime_error(tree, f"Error binding {name}")
+            declare_name(tree, name, value)
+ 
+    # run the function on the local environment
+    result = eval_tree(fun.body, local)
+    if fun.return_type == RefType.INT_VAR:
+        result = int(result)
+    else:
+        result = float(result)
+    return result
+
+
+
 
 ################ Helper Functions ########################
 def get_record_env(tree, env):
@@ -372,9 +463,9 @@ def get_array_index(tree, env):
         index.append(eval_tree(t, env))
     return index
 
-def declare_name(name, value, env):
+def declare_name(tree, name, value, env):
     # make sure the name is unique
-    if env.get(name) != None:
+    if env.isLocal(name):
         runtime_error(tree, f"Redeclaration of variable {name}")
     env.set(name, value)
 

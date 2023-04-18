@@ -270,6 +270,8 @@ class Parser:
         while not done:
             if self.__has(Token.ARRAY):
                 p = self.__parse_array_decl()
+            elif self.__has(Token.RECORD):
+                p = self.__parse_record_decl(must_be_var=True)
             else:
                 p = self.__parse_var_decl()
             params.append(p)
@@ -471,7 +473,7 @@ class Parser:
         self.__lexer.next()
         return result
 
-    def __parse_record_decl(self):
+    def __parse_record_decl(self, must_be_var = False):
         """
         < Record-Decl > ::= RECORD ID NEWLINE < Field-List > END
                             | RECORD ID ID
@@ -483,6 +485,9 @@ class Parser:
         self.__must_be(Token.ID)
         tag = self.__lexer.get_token()
         self.__lexer.next()
+
+        # stop if we must have a variable 
+        must_be_var and self.__must_be(Token.ID)
 
         if self.__has(Token.ID):
             # declaration of a record variable

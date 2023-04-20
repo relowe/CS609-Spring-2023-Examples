@@ -86,7 +86,7 @@ class ReferenceEnvironment:
         # our enclosing environment
         self.__parent = parent
     
-    def isLocal(self, sym):
+    def is_local(self, sym):
         """
         Return true if sym is local to this nested environment
         """
@@ -113,6 +113,9 @@ class ReferenceEnvironment:
         else:
             # upstream variable
             return self.__parent.set(sym, value)
+    
+    def set_local(self, sym, value):
+        self.__sym[sym] = value
     
     def print_sym(self):
         print(self.__sym)
@@ -465,9 +468,9 @@ def get_array_index(tree, env):
 
 def declare_name(tree, name, value, env):
     # make sure the name is unique
-    if env.isLocal(name):
+    if env.is_local(name):
         runtime_error(tree, f"Redeclaration of variable {name}")
-    env.set(name, value)
+    env.set_local(name, value)
 
 
 def runtime_error(tree, msg):

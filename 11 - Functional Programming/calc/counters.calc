@@ -1,0 +1,17 @@
+# demonstrate closures in calc
+function make_counter(integer by) returns function_var
+    function count(integer x) returns integer
+        x+by
+    end
+
+    count
+end
+
+function_var by10 
+function_var by5 
+
+by10 = make_counter(10)
+by5 = make_counter(5)
+
+by10(0)
+by5(0)

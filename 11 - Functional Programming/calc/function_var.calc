@@ -1,0 +1,8 @@
+function four(integer x) returns integer
+    2+2
+end
+
+function_var f
+
+f = four
+f(2)

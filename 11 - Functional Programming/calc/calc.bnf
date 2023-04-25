@@ -17,7 +17,9 @@ Parser Grammar
                     | EQUAL < Expression >
                     | ""
 
-< Function-Definition > ::= FUNCTION ID LPAREN < Parameter-List > RPAREN RETURNS < Simple-Type > NEWLINE < Program > END
+< Function-Definition > ::= FUNCTION ID LPAREN < Parameter-List > RPAREN RETURNS < Return-Type > NEWLINE < Program > END
+
+< Return-Type > ::= < Simple-Type > | FUNCTION_VAR
 
 < Parameter-List > ::= < Parameter-List > COMMA < Parmeter-List' >
                        | < Parameter-List' >
@@ -34,6 +36,7 @@ Parser Grammar
 
 < Var-Decl >    ::= < Simple-Type > ID
                     | < Array-Decl > ID
+                    | FUNCTION_VAR ID
 
 < Array-Decl >  ::= ARRAY OF < Array-Type > WITH BOUNDS < Array-Bounds > 
 
@@ -133,6 +136,7 @@ WHILE       while
 DO          do
 FUNCTION    function
 RETURNS     returns
+FUNCTION_VAR function_var
 COMMENT      # to the end of the line 
   - Note: We will not make a comment token. Lexer skips the comments
 

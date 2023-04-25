@@ -184,7 +184,7 @@ class Parser:
         """
         if self.__has(Token.INPUT):
             result = self.__parse_input()
-        elif self.__has(Token.INTEGER) or self.__has(Token.REAL) or self.__has(Token.ARRAY):
+        elif self.__has(Token.INTEGER) or self.__has(Token.REAL) or self.__has(Token.ARRAY) or self.__has(Token.FUNCTION_VAR):
             result = self.__parse_var_decl()
         elif self.__has(Token.NEWLINE):
             # null statement
@@ -214,7 +214,8 @@ class Parser:
 
     def __parse_function_definition(self):
         """
-        < Function-Definition > ::= FUNCTION ID LPAREN < Parameter-List > RPAREN RETURNS < Simple-Type > NEWLINE < Program > END
+        < Function-Definition > ::= FUNCTION ID LPAREN < Parameter-List > RPAREN RETURNS < Return-Type > NEWLINE < Program > END
+        < Return-Type > ::= < Simple-Type > | FUNCTION_VAR
         """
         # get the function token
         self.__must_be(Token.FUNCTION)
@@ -242,7 +243,7 @@ class Parser:
         self.__lexer.next()
 
         # get the return type
-        self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
+        self.__has(Token.FUNCTION_VAR) or self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
         return_type = ParseTree(Operator.FUNTYPE, self.__lexer.get_token())
         self.__lexer.next()
 
@@ -375,10 +376,11 @@ class Parser:
         """
         < Var-Decl >    ::= < Simple-Type > ID
                             | < Array-Type > ID
+                            | FUNCTION_VAR ID
 
         < Simple-Type > ::= INTEGER | REAL
         """
-        if self.__has(Token.INTEGER) or self.__has(Token.REAL):
+        if self.__has(Token.INTEGER) or self.__has(Token.REAL) or self.__has(Token.FUNCTION_VAR):
             # get the token
             tok = self.__lexer.get_token()
             self.__lexer.next()

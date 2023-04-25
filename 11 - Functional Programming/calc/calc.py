@@ -7,6 +7,11 @@ from CalcLexer import Lexer,Token
 from CalcParser import Parser,Operator
 import copy
 
+class CalcClosure:
+    def __init__(self, function, env):
+        self.function = function
+        self.env = env
+
 class CalcFunction:
     def __init__(self, parameters, return_type, body):
         self.parameters = parameters
@@ -67,6 +72,7 @@ class RefType(Enum):
     ARRAY_VAR = auto()
     RECORD_VAR = auto()
     FUNCTION = auto()
+    FUNCTION_VAR = auto()
 
 
 
@@ -176,6 +182,10 @@ def eval_program(tree, env):
         if value != None:
             result = value
             print(result)
+    
+    # create closures if we are returning functions
+    if type(result) == CalcFunction:
+        result = CalcClosure(result, env)
     return result
 
 
@@ -271,6 +281,15 @@ def eval_assign(tree, env):
         value = int(value)
     elif var.ref_type == RefType.REAL_VAR:
         value = float(value)
+    elif var.ref_type == RefType.FUNCTION_VAR:
+        # type coercion and checking for assignment
+        if type(value) == CalcClosure:
+            # nothing to do
+            pass
+        elif type(value) == CalcFunction:
+            value = CalcClosure(value, env)
+        else:
+            runtime_error(tree, f"Invalid assignment of non-function to function variable")
 
     assign(var_tree, value, var_env)
 
@@ -282,6 +301,9 @@ def eval_decl(tree, env):
     elif tree.token.token == Token.REAL:
         ref_type = RefType.REAL_VAR
         init = 0.0
+    elif tree.token.token == Token.FUNCTION_VAR:
+        ref_type = RefType.FUNCTION_VAR
+        init = None
 
     # get the name and the value
     name = tree.children[0].token.lexeme
@@ -396,9 +418,14 @@ def eval_funcall(tree, env):
 
     # retrieve the function
     entry = env.get(name)
-    if entry == None or entry.ref_type != RefType.FUNCTION:
-        runtime_error(tree, f"{name} is not a function.")
-    fun = entry.value
+    if entry.ref_type == RefType.FUNCTION_VAR:
+        fun = entry.value.function
+        fun_env = entry.value.env
+    else:
+        if entry == None or entry.ref_type != RefType.FUNCTION:
+            runtime_error(tree, f"{name} is not a function.")
+        fun = entry.value
+        fun_env = env
     
     # verify the number of arguments
     arg_expressions = tree.children[1].children
@@ -406,7 +433,7 @@ def eval_funcall(tree, env):
         runtime_error(tree, f"Incorrect number of arguments to {name}")
     
     # create the local environment and bind the arguments
-    local = ReferenceEnvironment(env)
+    local = ReferenceEnvironment(fun_env)
     for i in range(len(fun.parameters)):
         p = fun.parameters[i]
         if p.op == Operator.DECL:
@@ -426,7 +453,7 @@ def eval_funcall(tree, env):
     result = eval_tree(fun.body, local)
     if fun.return_type == RefType.INT_VAR:
         result = int(result)
-    else:
+    elif fun.return_type == RefType.REAL_VAR:
         result = float(result)
     return result
 

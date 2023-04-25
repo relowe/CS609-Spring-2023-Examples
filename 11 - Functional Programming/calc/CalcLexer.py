@@ -39,6 +39,7 @@ class Token(Enum):  # a class which inherits enum
     WHILE = auto()
     DO = auto()
     FUNCTION = auto()
+    FUNCTION_VAR = auto()
     RETURNS = auto()
 
 # Store the details of a token
@@ -232,7 +233,8 @@ class Lexer:
               'while' : Token.WHILE,
               'do': Token.DO,
               'function': Token.FUNCTION,
-              'returns': Token.RETURNS }
+              'returns': Token.RETURNS,
+              'function_var': Token.FUNCTION_VAR }
 
         # consume characters which match the pattern
         if self.__cur.isalpha() or self.__cur == '_':

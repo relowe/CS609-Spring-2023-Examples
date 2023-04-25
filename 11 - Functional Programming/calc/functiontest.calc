@@ -1,0 +1,22 @@
+function l2dist(real x1, real y1, real x2, real y2) returns real 
+    real dx
+    real dy
+
+    dx = x1 - x2
+    dy = y1 - y2
+
+    (dx^2 + dy^2) ^ 0.5 
+end
+
+real x1
+real x2
+real y1
+real y2
+
+input x1
+input y1
+input x2
+input y2
+
+l2dist(x1, y1, x2, y2)
+x1

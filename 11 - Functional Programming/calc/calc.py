@@ -172,6 +172,8 @@ def eval_tree(tree, env):
         return eval_fundef(tree, env)
     elif tree.op == Operator.FUNCALL:
         return eval_funcall(tree, env)
+    elif tree.op == Operator.LAMBDA:
+        return eval_lambda(tree, env)
 
 def eval_program(tree, env):
     # semantic behavior for now is we print the result of every statement
@@ -400,8 +402,8 @@ def eval_fundef(tree, env):
         return_type = RefType.INT_VAR
     elif tok == Token.REAL:
         return_type = RefType.REAL_VAR
-    else:
-        return_type = None
+    elif tok == Token.FUNCTION_VAR:
+        return_type = RefType.FUNCTION_VAR
     
     # get the body
     body = tree.children[3]
@@ -413,18 +415,14 @@ def eval_fundef(tree, env):
 
 
 def eval_funcall(tree, env):
-    # get the name of the function
-    name = tree.children[0].token.lexeme
-
     # retrieve the function
-    entry = env.get(name)
-    if entry.ref_type == RefType.FUNCTION_VAR:
-        fun = entry.value.function
-        fun_env = entry.value.env
+    fun = eval_tree(tree.children[0], env)
+    if type(fun) == CalcClosure:
+        fun_env = fun.env
+        fun = fun.function
     else:
-        if entry == None or entry.ref_type != RefType.FUNCTION:
+        if type(fun) != CalcFunction:
             runtime_error(tree, f"{name} is not a function.")
-        fun = entry.value
         fun_env = env
     
     # verify the number of arguments
@@ -457,6 +455,26 @@ def eval_funcall(tree, env):
         result = float(result)
     return result
 
+
+def eval_lambda(tree, env):
+    # get the parameters
+    params = tree.children[0].children
+
+    # get the return type
+    tok = tree.children[1].token.token
+    if tok == Token.INTEGER:
+        return_type = RefType.INT_VAR
+    elif tok == Token.REAL:
+        return_type = RefType.REAL_VAR
+    elif tok == Token.FUNCTION_VAR:
+        return_type = RefType.FUNCTION_VAR
+    
+    # get the body
+    body = tree.children[2]
+
+    # build the closure object
+    f = CalcFunction(params, return_type, body)
+    return CalcClosure(f, env)
 
 
 

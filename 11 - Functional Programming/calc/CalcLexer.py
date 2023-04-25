@@ -40,6 +40,7 @@ class Token(Enum):  # a class which inherits enum
     DO = auto()
     FUNCTION = auto()
     FUNCTION_VAR = auto()
+    LAMBDA = auto()
     RETURNS = auto()
 
 # Store the details of a token
@@ -234,7 +235,8 @@ class Lexer:
               'do': Token.DO,
               'function': Token.FUNCTION,
               'returns': Token.RETURNS,
-              'function_var': Token.FUNCTION_VAR }
+              'function_var': Token.FUNCTION_VAR,
+              'lambda': Token.LAMBDA }
 
         # consume characters which match the pattern
         if self.__cur.isalpha() or self.__cur == '_':

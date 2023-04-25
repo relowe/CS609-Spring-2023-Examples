@@ -87,6 +87,7 @@ Parser Grammar
                     | FLOATLIT
 
 < Ref >         ::= ID < Ref' >
+                    | < Lambda-Expression > < Ref' >
 
 < Ref' >        ::= LBRACKET < Arg-List > RBRACKET < Ref' >
                     |DOT < Ref > 
@@ -98,7 +99,7 @@ Parser Grammar
                     | < Expression >
 
 
-
+< Lambda-Expression > ::= LAMBDA LPAREN < Parameter-List > RPAREN RETURNS < Return-Type > < Expression >
 
 Lexer Grammar
 =============
@@ -137,6 +138,7 @@ DO          do
 FUNCTION    function
 RETURNS     returns
 FUNCTION_VAR function_var
+LAMBDA      lambda
 COMMENT      # to the end of the line 
   - Note: We will not make a comment token. Lexer skips the comments
 

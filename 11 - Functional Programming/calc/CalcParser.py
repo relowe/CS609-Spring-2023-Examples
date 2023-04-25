@@ -3,6 +3,7 @@ from CalcLexer import Token, TokenDetail
 import sys
 from enum import Enum, auto
 import math
+import traceback
 
 class Operator(Enum):
     PROG = auto()
@@ -28,6 +29,7 @@ class Operator(Enum):
     FUNDEF = auto()
     FUNCALL = auto()
     FUNTYPE = auto()
+    LAMBDA = auto()
 
 aryness = {
     Operator.PROG: math.inf,
@@ -52,7 +54,8 @@ aryness = {
     Operator.WHILE: 2,
     Operator.FUNDEF: 4,
     Operator.FUNCALL: 2,
-    Operator.FUNTYPE: 0
+    Operator.FUNTYPE: 0,
+    Operator.LAMBDA: 3
 }
 
 class ParseTree:
@@ -151,6 +154,7 @@ class Parser:
         if self.__has(t):
             return True
         
+        traceback.print_stack()
         sys.stderr.write(f"Unexpected token {self.__lexer.get_token()}\n")
         sys.exit(-1)
 
@@ -688,7 +692,7 @@ class Parser:
             result = ParseTree(Operator.NEG, self.__lexer.get_token())
             self.__lexer.next()
             result.add_right(self.__parse_exp())
-        elif self.__has(Token.ID):
+        elif self.__has(Token.ID) or self.__has(Token.LAMBDA):
             return self.__parse_ref()
         elif self.__has(Token.INTLIT):
             result = ParseTree(Operator.LIT, self.__lexer.get_token())
@@ -701,23 +705,28 @@ class Parser:
     def __parse_ref(self):
         """
         < Ref >         ::= ID < Ref' >
+                            | < Lambda-Expression > < Ref' >
 
         < Ref' >        ::= LBRACKET < Index > RBRACKET < Ref' >
                             | DOT < Ref > 
                             | LPAREN < Arg-List > RPAREN
                             | ""
         """
-        self.__must_be(Token.ID)
-        tok = self.__lexer.get_token()
-        self.__lexer.next()
+        if self.__has(Token.LAMBDA):
+            tok = None
+            result = self.__parse_lambda_expression()
+        else:
+            self.__must_be(Token.ID)
+            tok = self.__lexer.get_token()
+            self.__lexer.next()
+            result = ParseTree(Operator.VAR, tok)
 
+        # override on array access
         if self.__has(Token.LBRACKET):
             self.__lexer.next() # consume the bracket
             result = ParseTree(Operator.ARRAY_VAR, tok, self.__parse_arg_list())
             self.__must_be(Token.RBRACKET)
             self.__lexer.next()
-        else:
-            result = ParseTree(Operator.VAR, tok)
 
         if self.__has(Token.DOT):
             # get and consume the dot
@@ -764,6 +773,42 @@ class Parser:
         tok = self.__lexer.get_token()
         self.__lexer.next()
         return ParseTree(Operator.VAR, tok)
+
+
+    def __parse_lambda_expression(self):
+        """
+        < Lambda-Expression > ::= LAMBDA LPAREN < Parameter-List > RPAREN RETURNS < Return-Type > < Expression >
+        """
+        # get the function token
+        self.__must_be(Token.LAMBDA)
+        tok = self.__lexer.get_token()
+        self.__lexer.next()
+
+        # check parens
+        self.__must_be(Token.LPAREN)
+        self.__lexer.next()
+
+        # get parameters
+        params = self.__parse_parameter_list()
+
+        # check parens
+        self.__must_be(Token.RPAREN)
+        self.__lexer.next()
+
+        # check for returns
+        self.__must_be(Token.RETURNS)
+        self.__lexer.next()
+
+        # get the return type
+        self.__has(Token.FUNCTION_VAR) or self.__has(Token.INTEGER) or self.__must_be(Token.REAL)
+        return_type = ParseTree(Operator.FUNTYPE, self.__lexer.get_token())
+        self.__lexer.next()
+
+        # get the function body
+        body = self.__parse_expression()
+
+        # return the function
+        return ParseTree(Operator.LAMBDA, tok, [params, return_type, body])
 
 
 def main(file):

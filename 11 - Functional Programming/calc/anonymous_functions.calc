@@ -1,0 +1,7 @@
+# try out lambda expressions
+
+function_var by10
+by10 = lambda (integer x) returns integer x + 10
+by10(0)
+
+lambda (integer x) returns integer x + 5 (0)
